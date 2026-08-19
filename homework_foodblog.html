@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Food Blog</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family:Arial, Helvetica, sans-serif;
+        }
+        #leftside {
+            float:left;
+            width: 30%;
+            min-height: 1200px;
+            background-color:rgb(77, 192, 154);
+        }
+        #rightside {
+            float:left;
+            width: 70%;
+            min-height: 1200px;
+            background-color:rgb(238, 226, 192);
+            position:relative;
+        }
+        #container {
+            background-color:rgba(255, 255, 255, 0.85);
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            min-width: 1100px;
+            min-height: 1050px;
+            border-radius: 0.7em;
+        }
+        header {
+            height: 50px;
+            background-color:rgba(231, 229, 229, 0.5);
+            font-size: 2.75em;
+            padding:0.5em;
+            color:rgb(216, 150, 7);
+        }
+        header span {
+            font-family: 'Sacramento', cursive;
+        }
+        main {
+            position: relative;
+        }
+        main h2 {
+            position: absolute;
+            left: 20%;
+            top: 30px;
+            margin: 25px 0 200px 50px;
+            color:rgb(60, 190, 160);
+            text-transform: uppercase;
+        }
+        main #photos img {
+            margin: 0.75em;
+            border: 0.85em solid rgb(255, 255, 255);
+        }
+        section#blogposts {
+            position: absolute;
+            left: 20%;
+            top: 70px;
+            padding: 50px;
+        }
+        main .post {
+            margin: 25px;
+            padding: 25px;
+            border: 2px solid rgba(83, 78, 58, 0.6);
+            border-radius: 0.5em;
+            position: relative;
+            min-height: 105px;
+        }
+        .profile-trigger {
+            float: left;
+            width: 58px;
+            height: 58px;
+            margin: 0 18px 12px 0;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            cursor: pointer;
+        }
+        .profile-trigger img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+        .post p {
+            line-height: 1.5;
+        }
+        .profile-modal {
+            position: fixed;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            width: min(430px, calc(100% - 40px));
+            padding: 32px 36px 28px;
+            transform: translate(-50%, -50%);
+            border-radius: 14px;
+            background: rgba(29, 34, 32, 0.98);
+            color: #fff;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38);
+        }
+        .profile-modal h3 {
+            margin: 0 0 16px;
+            color: rgb(77, 192, 154);
+            font-size: 1.8em;
+        }
+        .profile-modal p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .profile-modal strong {
+            color: rgb(238, 226, 192);
+        }
+        .profile-close {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-size: 1.6em;
+            cursor: pointer;
+        }
+        footer {
+            position: absolute;
+            bottom: 0;
+            height: 50px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.85em;
+        }
+    </style>
+
+    
+
+</head>
+<body>
+    <aside id="leftside"></aside>
+    <aside id="rightside"></aside>
+    <div id="container">
+        <blog-header :title="title"></blog-header>
+
+        <main>
+            <aside id="photos">
+                <img :src="image.src" alt="White Chicken Chili" width="180">
+            </aside>
+            <comments-section :comments="comments" :heading="commentsHeading" @profile-selected="showProfile"></comments-section>
+        </main>
+
+        <section v-if="profileVisible" class="profile-modal" role="dialog" aria-modal="true" :aria-label="selectedProfile.name + ' profile'">
+            <button class="profile-close" type="button" aria-label="Close profile" @click="closeProfile">&times;</button>
+            <h3>{{ selectedProfile.name }}</h3>
+            <p><strong>Foodie Level:</strong> {{ selectedProfile.foodieLevel }}</p>
+            <p><strong>Bio:</strong> {{ selectedProfile.bio }}</p>
+            <button type="button" @click="closeProfile">Close</button>
+        </section>
+
+        <footer>{{ copyright }}</footer>
+    </div>
+
+    <script>
+        // Reusable components keep the page structure separate from its data.
+        Vue.component('blog-header', {
+            props: ['title'],
+            template: '<header><span>{{ title }}</span></header>'
+        });
+
+        Vue.component('comment-card', {
+            props: ['comment'],
+            template: `
+                <div class="post">
+                    <button class="profile-trigger" type="button" :aria-label="'View ' + comment.author + ' profile'" @click="$emit('profile-selected', comment)">
+                        <img :src="comment.profileImage" :alt="comment.author + ' profile placeholder'">
+                    </button>
+                    <span class="author">{{ comment.author }}</span> —
+                    <span class="date">{{ comment.date }}</span>
+                    <span class="reply">{{ comment.reply }}</span>
+                    <p>{{ comment.body }}</p>
+                </div>
+            `
+        });
+
+        Vue.component('comments-section', {
+            props: ['comments', 'heading'],
+            template: `
+                <div>
+                    <h2>{{ heading }}</h2>
+                    <section id="blogposts">
+                        <comment-card
+                            v-for="comment in comments"
+                            :key="comment.author"
+                            :comment="comment"
+                            @profile-selected="$emit('profile-selected', $event)">
+                        </comment-card>
+                    </section>
+                </div>
+            `
+        });
+
+        // The single Vue instance owns all page data and mounts on the existing container.
+        new Vue({
+            el: '#container',
+            data: {
+                title: 'Food Blog',
+                image: {
+                    src: 'images/chili.jpg',
+                    alt: 'White Chicken Chili'
+                },
+                commentsHeading: 'Comments',
+                profileVisible: false,
+                selectedProfile: {
+                    name: '',
+                    foodieLevel: '',
+                    bio: ''
+                },
+                profilePlaceholder: 'images/profile-placeholder.svg',
+                comments: [
+                    {
+                        author: 'Brianna',
+                        foodieLevel: 'Not provided in starter files',
+                        bio: 'Author biography not provided in starter files.',
+                        date: 'February 18, 2021 @ 3:30 pm',
+                        reply: 'REPLY',
+                        profileImage: 'images/profile-placeholder.svg',
+                        body: 'Was amazing! My Walmart didn’t have coriander in stock and didn’t have ground cumin. I used serrano instead of jalapeño. It was just like my favorite tortilla soup from BJs. I am sending this recipe to my family. I want everyone to try it!'
+                    },
+                    {
+                        author: 'LINH',
+                        foodieLevel: 'Not provided in starter files',
+                        bio: 'Author biography not provided in starter files.',
+                        date: 'February 15, 2021 @ 9:46 am',
+                        reply: 'REPLY',
+                        profileImage: 'images/profile-placeholder.svg',
+                        body: 'I just made this soup today and it’s so tasty! didn’t have corn at home but still turned out very good.  It’s a winner!  I made beef chili for my parents; but since my dad has gout he can’t eat beef; this white chicken chili is perfect for him.  Thank you Lisa!'
+                    },
+                    {
+                        author: 'CATHERINE LEONARDO',
+                        foodieLevel: 'Not provided in starter files',
+                        bio: 'Author biography not provided in starter files.',
+                        date: 'February 13, 2021 @ 12:58 pm',
+                        reply: 'REPLY',
+                        profileImage: 'images/profile-placeholder.svg',
+                        body: 'I LOVE this White Chicken Chili! You are right, it is satiating meal—delicious with toasted bread. Refreshingly different taste than any chicken chili I’ve made in the past. I made it exactly as written and added some chopped zucchini, carrots, and celery. Instead of shredding the chicken, I chopped it into small pieces. It freezes very well. Will be an all-time favorite, for sure.'
+                    },
+                    {
+                        author: 'KALI',
+                        foodieLevel: 'Not provided in starter files',
+                        bio: 'Author biography not provided in starter files.',
+                        date: 'February 13, 2021 @ 11:31 am',
+                        reply: 'REPLY',
+                        profileImage: 'images/profile-placeholder.svg',
+                        body: 'This recipe is dynamite! My partner usually won’t eat beans but he finished the whole pot (darn was hoping to have some for leftovers haha). This is crowd-pleaser that I am going to add to my regular recipe rotation. Thanks so much, Lisa!'
+                    }
+                ],
+                copyright: '© Copyright FOOD BLOG'
+            },
+            methods: {
+                showProfile(comment) {
+                    this.selectedProfile = {
+                        name: comment.author,
+                        foodieLevel: comment.foodieLevel,
+                        bio: comment.bio
+                    };
+                    this.profileVisible = true;
+                },
+                closeProfile() {
+                    this.profileVisible = false;
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
